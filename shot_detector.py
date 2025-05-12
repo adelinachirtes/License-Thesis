@@ -6,6 +6,9 @@ import cvzone
 import math
 import numpy as np
 from utils import score, detect_down, detect_up, in_hoop_region, clean_hoop_pos, clean_ball_pos, get_device
+import warnings
+from numpy.polynomial.polyutils import RankWarning
+warnings.simplefilter('ignore', RankWarning)
 
 
 class ShotDetector:
@@ -108,12 +111,49 @@ class ShotDetector:
         # Clean and display ball motion
         self.ball_pos = clean_ball_pos(self.ball_pos, self.frame_count)
         for i in range(0, len(self.ball_pos)):
-            cv2.circle(self.frame, self.ball_pos[i][0], 2, (0, 0, 255), 2)
+            cv2.circle(self.frame, self.ball_pos[i][0], 2, (0, 0, 255), 2)  # Red dots for ball trail
 
         # Clean hoop motion and display current hoop center
         if len(self.hoop_pos) > 1:
             self.hoop_pos = clean_hoop_pos(self.hoop_pos)
-            cv2.circle(self.frame, self.hoop_pos[-1][0], 2, (128, 128, 0), 2)
+            cv2.circle(self.frame, self.hoop_pos[-1][0], 2, (128, 128, 0), 2)  # Yellow dot for hoop center
+
+        # Optional: draw the predicted parabolic trajectory
+        if len(self.ball_pos) >= 5:
+            # Folosește doar ultimele 10 puncte pentru traiectorie
+            points = self.ball_pos[-10:] if len(self.ball_pos) > 10 else self.ball_pos
+            x_vals = [pos[0][0] for pos in points]
+            y_vals = [pos[0][1] for pos in points]
+
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore')
+                    coeffs = np.polyfit(x_vals, y_vals, 2)
+                a, b, c = coeffs
+
+                # Desenare parabola
+                x_range = range(min(x_vals), max(x_vals))
+                for x in x_range:
+                    y = int(a * x ** 2 + b * x + c)
+                    if 0 <= y < self.frame.shape[0]:
+                        cv2.circle(self.frame, (x, y), 1, (255, 255, 0), -1)
+
+                # Marcare intersecție cu coșul
+                if len(self.hoop_pos) > 0:
+                    hoop = self.hoop_pos[-1]
+                    hoop_x1 = hoop[0][0] - 0.5 * hoop[2]
+                    hoop_x2 = hoop[0][0] + 0.5 * hoop[2]
+                    hoop_y1 = hoop[0][1] - 0.5 * hoop[3]
+                    hoop_y2 = hoop[0][1] + 0.5 * hoop[3]
+
+                    for x in np.linspace(hoop_x1, hoop_x2, 30):
+                        y = int(a * x ** 2 + b * x + c)
+                        if hoop_y1 <= y <= hoop_y2:
+                            cv2.circle(self.frame, (int(x), y), 6, (0, 255, 255), 2)  # Galben = intersecție
+                            break
+
+            except Exception as e:
+                pass
 
     def shot_detection(self):
         if len(self.hoop_pos) > 0 and len(self.ball_pos) > 0:

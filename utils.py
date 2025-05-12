@@ -12,39 +12,31 @@ def get_device():
         device = 'cpu'
     return device
 
-
 def score(ball_pos, hoop_pos):
-    x = []
-    y = []
-    rim_height = hoop_pos[-1][0][1] - 0.5 * hoop_pos[-1][3]
+    if len(ball_pos) < 5 or len(hoop_pos) == 0:
+        return False
 
-    # Get first point above rim and first point below rim
-    for i in reversed(range(len(ball_pos))):
-        if ball_pos[i][0][1] < rim_height:
-            x.append(ball_pos[i][0][0])
-            y.append(ball_pos[i][0][1])
-            if i + 1 < len(ball_pos):
-                x.append(ball_pos[i + 1][0][0])
-                y.append(ball_pos[i + 1][0][1])
-            break
+    x_vals = [pos[0][0] for pos in ball_pos]
+    y_vals = [pos[0][1] for pos in ball_pos]
 
-    # Create line from two points
-    if len(x) > 1:
-        m, b = np.polyfit(x, y, 1)
-        predicted_x = ((hoop_pos[-1][0][1] - 0.5 * hoop_pos[-1][3]) - b) / m
-        rim_x1 = hoop_pos[-1][0][0] - 0.4 * hoop_pos[-1][2]
-        rim_x2 = hoop_pos[-1][0][0] + 0.4 * hoop_pos[-1][2]
+    try:
+        coeffs = np.polyfit(x_vals, y_vals, 2)  # y = ax² + bx + c
+        a, b, c = coeffs
 
-        # Check if predicted path crosses the rim area (including rebound zone)
-        if rim_x1 < predicted_x < rim_x2:
-            return True
-        # Check if ball enters rebound zone near the hoop
-        hoop_rebound_zone = 10  # Define a buffer zone around the hoop
-        if rim_x1 - hoop_rebound_zone < predicted_x < rim_x2 + hoop_rebound_zone:
-            return True
+        hoop_x_center = hoop_pos[-1][0][0]
+        hoop_y_top = hoop_pos[-1][0][1] - 0.5 * hoop_pos[-1][3]
+        hoop_y_bottom = hoop_pos[-1][0][1] + 0.5 * hoop_pos[-1][3]
+        hoop_x1 = hoop_x_center - 0.5 * hoop_pos[-1][2]
+        hoop_x2 = hoop_x_center + 0.5 * hoop_pos[-1][2]
+
+        for x in np.linspace(hoop_x1, hoop_x2, num=25):
+            y = a * x**2 + b * x + c
+            if hoop_y_top <= y <= hoop_y_bottom:
+                return True
+    except:
+        return False
 
     return False
-
 
 # Detects if the ball is below the net - used to detect shot attempts
 def detect_down(ball_pos, hoop_pos):
