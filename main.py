@@ -3,17 +3,6 @@ from utils import get_device
 
 if __name__ == "__main__":
 
-    # 0. There are a lot of requirements to create/use OpenCV projects. I used the following video to get started
-    # https://youtu.be/WgPbbWmnXJ8
-
-    # If you want to train your own model, follow the steps below. Otherwise, use the pre-trained best.pt model
-
-    # 1. Download the dataset specified in config.yaml
-    # 2. Put the downloaded folders into your project and change absolute paths in config.yaml
-    # 3. Change the following text to the correct relative paths for your project
-    # 4. Run this
-    # 5. Go to runs/detect/train/weights and use that best.pt as the model while running shot_detector.py
-
     # Select device for training
     device = get_device()
 
@@ -22,7 +11,9 @@ if __name__ == "__main__":
 
     # Load a model
     #model = YOLO("yolov8s.yaml")  # pornește un model YOLOv8 nano fără greutăți preantrenate
-    model = YOLO("runs/detect/train19/weights/best.pt")  # încarcă un model YOLOv8 cu greutăți preantrenate
+    model = YOLO("runs/detect/train20/weights/best.pt")  # încarcă un model YOLOv8 cu greutăți preantrenate
 
     # Train the model
-    results = model.train(data='config.yaml', epochs=200, imgsz=640, device=device, batch=4, workers=1, augment=True)
+    results = model.train(data='config.yaml', epochs=300, imgsz=640, device=device, batch=8, workers=1, augment=True)
+
+    model.val(data='config.yaml', split='test')

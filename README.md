@@ -12,7 +12,6 @@ This project combines the power of Machine Learning and Computer Vision for the 
 
 ## Language
 - [English](README.md)
-- [中文](README-zh.md)
 
 ## Directory Structure
 
